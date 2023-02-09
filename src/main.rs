@@ -6,6 +6,6 @@ fn main() {
     for _ in 1..10 {
         let mnemonic = mnemonic_generator.generate();
 
-        eprintln!("{mnemonic}");
+        eprintln!("{mnemonic}, {:?}", mnemonic.to_seed_normalized(""));
     }
 }

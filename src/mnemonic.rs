@@ -10,11 +10,9 @@ impl MnemonicGenerator {
         MnemonicGenerator { number_of_words }
     }
 
-    pub fn generate(&self) -> String {
+    pub fn generate(&self) -> Mnemonic {
         let mut rng = rand::thread_rng();
 
-        Mnemonic::generate_in_with(&mut rng, Language::English, self.number_of_words)
-            .unwrap()
-            .to_string()
+        Mnemonic::generate_in_with(&mut rng, Language::English, self.number_of_words).unwrap()
     }
 }
