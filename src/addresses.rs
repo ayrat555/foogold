@@ -2,6 +2,7 @@ use bip39::Mnemonic;
 use bitcoin::network::constants::Network;
 use bitcoin::secp256k1::All;
 use bitcoin::util::address::Address as BitcoinAddress;
+use bitcoin::util::bip32::ChildNumber;
 use bitcoin::util::bip32::DerivationPath;
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::util::bip32::ExtendedPubKey;
@@ -16,9 +17,9 @@ pub struct AddressGenerator {
 
 #[derive(TypedBuilder, Debug)]
 pub struct Address {
-    mnemonic: String,
-    derivation_path: DerivationPath,
-    address: String,
+    pub mnemonic: String,
+    pub derivation_path: DerivationPath,
+    pub address: String,
 }
 
 impl AddressGenerator {
@@ -40,8 +41,18 @@ impl AddressGenerator {
             let child = master_key.derive_priv(&self.secp256k1, path).unwrap();
             let public_key = ExtendedPubKey::from_priv(&self.secp256k1, &child).public_key;
 
-            let addr =
-                BitcoinAddress::p2wpkh(&PublicKey::new(public_key), Network::Bitcoin).unwrap();
+            let addr = match path.into_iter().nth(0) {
+                Some(ChildNumber::Hardened { index: 84 }) => {
+                    BitcoinAddress::p2wpkh(&PublicKey::new(public_key), Network::Bitcoin).unwrap()
+                }
+                Some(ChildNumber::Hardened { index: 49 }) => {
+                    BitcoinAddress::p2shwpkh(&PublicKey::new(public_key), Network::Bitcoin).unwrap()
+                }
+                Some(ChildNumber::Hardened { index: 44 }) => {
+                    BitcoinAddress::p2pkh(&PublicKey::new(public_key), Network::Bitcoin)
+                }
+                value => panic!("Invalid derivation path {value:?}"),
+            };
 
             let address = Address::builder()
                 .mnemonic(mnemonic.to_string())
