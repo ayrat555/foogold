@@ -139,6 +139,7 @@ dependencies = [
  "bitcoin",
  "frankenstein",
  "rand 0.6.5",
+ "typed-builder",
 ]
 
 [[package]]
