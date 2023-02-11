@@ -53,6 +53,17 @@ impl Repo {
         })
     }
 
+    pub fn block_exists(block_number: i32) -> Result<bool, RepoError> {
+        let mut connection = Self::pool().get()?;
+
+        let count = blocks::table
+            .filter(blocks::block_number.eq(block_number))
+            .count()
+            .get_result::<i64>(&mut connection)?;
+
+        Ok(count > 0)
+    }
+
     fn create_connection_pool() -> r2d2::Pool<diesel_r2d2::ConnectionManager<PgConnection>> {
         let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
         let pool_size = env::var("DB_POOL_SIZE")

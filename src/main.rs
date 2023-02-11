@@ -10,10 +10,15 @@ fn main() {
     dotenv().ok();
 
     let indexer = Indexer::new(
-        "https://btc.getblock.io/1c662d3b-4c7e-447c-8cc0-1c3c9be5b5f7/mainnet/".to_string(),
+        "https://spinode-kong-proxy.payments-dev.testenv.io/6dd03d56-0da0-4385-8c52-3e5a5efdf2f0"
+            .to_string(),
     );
 
-    indexer.index_block(100_000);
+    for i in 450000..500000 {
+        indexer.index_block(i).unwrap();
+
+        eprintln!("Indexed block {i}")
+    }
 }
 
 // examples
@@ -33,7 +38,8 @@ fn generate_10_mnemonics() -> Vec<String> {
 
 fn fetch_block_data() {
     let client = RpcClient::new(
-        "https://btc.getblock.io/1c662d3b-4c7e-447c-8cc0-1c3c9be5b5f7/mainnet/".to_string(),
+        "https://spinode-kong-proxy.payments-dev.testenv.io/d12f525b-880b-4d6e-ae52-003668c92f08"
+            .to_string(),
     );
 
     eprintln!("{:?}", client.get_block_data_by_block_number(100000));

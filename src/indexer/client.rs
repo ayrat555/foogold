@@ -90,7 +90,7 @@ enum AddressKind {
 
 impl RpcClient {
     pub fn new(url: String) -> Self {
-        let request_agent = ureq::builder().timeout(Duration::from_secs(10)).build();
+        let request_agent = ureq::builder().timeout(Duration::from_secs(30)).build();
 
         RpcClient { url, request_agent }
     }
@@ -108,8 +108,6 @@ impl RpcClient {
 
     fn get_block_hash(&self, block_number: u64) -> Result<String, ClientError> {
         let block_hash = self.request("getblockhash", &[block_number])?;
-
-        eprintln!("{block_hash}");
 
         Ok(block_hash)
     }
@@ -131,7 +129,8 @@ impl RpcClient {
         let prepared_request = self
             .request_agent
             .post(&self.url)
-            .set("Content-Type", "application/json");
+            .set("Content-Type", "application/json")
+            .set("apikey", "ae3b7595-8b8a-4f7d-aa8c-aa143d5eca48");
 
         let encoded_params = self.params(method, &params);
         let response = prepared_request.send_string(&encoded_params)?;

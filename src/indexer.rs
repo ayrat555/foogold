@@ -35,9 +35,11 @@ impl Indexer {
     }
 
     pub fn index_block(&self, block_number: u64) -> Result<(), IndexerError> {
-        let block_data = self.client.get_block_data_by_block_number(block_number)?;
+        if !Repo::block_exists(block_number as i32)? {
+            let block_data = self.client.get_block_data_by_block_number(block_number)?;
 
-        Repo::insert_block_data(block_data)?;
+            Repo::insert_block_data(block_data)?;
+        }
 
         Ok(())
     }
