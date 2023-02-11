@@ -1,40 +1,20 @@
-use bitcoincore_rpc::Auth;
-use bitcoincore_rpc::Client;
-use bitcoincore_rpc::Error;
-use bitcoincore_rpc::RpcApi;
-use diesel::pg::PgConnection;
-use diesel::r2d2;
-use once_cell::sync::OnceCell;
-use std::env;
+use thiserror::Error;
 use typed_builder::TypedBuilder;
 
 mod client;
+mod repo;
 
+pub use client::ClientError;
 pub use client::RpcClient;
+pub use repo::Repo;
+pub use repo::RepoError;
 
-static POOL: OnceCell<r2d2::Pool<r2d2::ConnectionManager<PgConnection>>> = OnceCell::new();
-
-struct Repo {}
-
-impl Repo {
-    pub fn create_connection_pool() -> r2d2::Pool<r2d2::ConnectionManager<PgConnection>> {
-        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let pool_size = env::var("DB_POOL_SIZE")
-            .expect("DB_POOL_SIZE must be set")
-            .parse()
-            .unwrap();
-
-        let manager = r2d2::ConnectionManager::<PgConnection>::new(database_url);
-
-        r2d2::Pool::builder()
-            .max_size(pool_size)
-            .build(manager)
-            .unwrap()
-    }
-
-    pub fn pool() -> &'static r2d2::Pool<r2d2::ConnectionManager<PgConnection>> {
-        POOL.get_or_init(Repo::create_connection_pool)
-    }
+#[derive(Error, Debug)]
+pub enum IndexerError {
+    #[error("Repo Error {0:?}")]
+    RepoError(#[from] RepoError),
+    #[error("Client Error {0:?}")]
+    ClientError(#[from] ClientError),
 }
 
 #[derive(TypedBuilder, Debug)]
@@ -43,24 +23,22 @@ pub struct BlockData {
     addresses: Vec<String>,
 }
 
-struct BlockIndexer {
-    client: Client,
+pub struct Indexer {
+    client: RpcClient,
 }
 
-impl BlockIndexer {
-    pub fn new() -> BlockIndexer {
-        let node_url = env::var("NODE_URL").expect("NODE_URL must be set");
-        let client = Client::new(&node_url, Auth::None).unwrap();
+impl Indexer {
+    pub fn new(node_url: String) -> Self {
+        let client = RpcClient::new(node_url.to_string());
 
-        BlockIndexer { client }
+        Self { client }
     }
 
-    pub fn index_block(&self, block_number: u64) -> Result<(), Error> {
-        let block_hash = self.client.get_block_hash(block_number)?;
-        let block = self.client.get_block(&block_hash)?;
+    pub fn index_block(&self, block_number: u64) -> Result<(), IndexerError> {
+        let block_data = self.client.get_block_data_by_block_number(block_number)?;
+
+        Repo::insert_block_data(block_data)?;
 
         Ok(())
     }
-
-    // fn api_block_to_block_data(&self, api_block: Block, block_number: u64) -> BlockData {}
 }

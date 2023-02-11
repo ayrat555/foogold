@@ -135,9 +135,6 @@ impl RpcClient {
 
         let encoded_params = self.params(method, &params);
         let response = prepared_request.send_string(&encoded_params)?;
-        // let json = response.into_string()?;
-
-        // eprintln!("{json}");
 
         let response: Response<T2> = serde_json::from_reader(response.into_reader())?;
 

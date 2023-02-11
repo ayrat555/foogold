@@ -1,22 +1,23 @@
 use bitcoin::util::bip32::DerivationPath;
+use dotenvy::dotenv;
 use foogold::AddressGenerator;
+use foogold::Indexer;
 use foogold::MnemonicGenerator;
 use foogold::RpcClient;
 use std::str::FromStr;
 
 fn main() {
-    // let mut buf: Vec<AlignedType> = Vec::new();
-    // buf.resize(Secp256k1::preallocate_size(), AlignedType::zeroed());
-    // let secp256k1 = Secp256k1::preallocated_new(buf.as_mut_slice()).unwrap();
+    dotenv().ok();
 
-    let client = RpcClient::new(
+    let indexer = Indexer::new(
         "https://btc.getblock.io/1c662d3b-4c7e-447c-8cc0-1c3c9be5b5f7/mainnet/".to_string(),
     );
 
-    eprintln!("{:?}", client.get_block_data_by_block_number(776002));
+    indexer.index_block(100_000);
 }
 
-// example
+// examples
+
 fn generate_10_mnemonics() -> Vec<String> {
     let mnemonic_generator = MnemonicGenerator::new(12);
     let mut vec = vec![];
@@ -28,6 +29,14 @@ fn generate_10_mnemonics() -> Vec<String> {
     }
 
     vec
+}
+
+fn fetch_block_data() {
+    let client = RpcClient::new(
+        "https://btc.getblock.io/1c662d3b-4c7e-447c-8cc0-1c3c9be5b5f7/mainnet/".to_string(),
+    );
+
+    eprintln!("{:?}", client.get_block_data_by_block_number(100000));
 }
 
 fn generate_addresses() {
