@@ -84,13 +84,13 @@ enum AddressKind {
     WitnessV0Keyhash,
     #[serde(rename = "witness_v1_taproot")]
     Witnessv1Taproot,
-    #[serde(rename = "witnessunknown")]
+    #[serde(rename = "witness_unknown")]
     WitnessUnknown,
 }
 
 impl RpcClient {
     pub fn new(url: String) -> Self {
-        let request_agent = ureq::builder().timeout(Duration::from_secs(30)).build();
+        let request_agent = ureq::builder().timeout(Duration::from_secs(100)).build();
 
         RpcClient { url, request_agent }
     }
