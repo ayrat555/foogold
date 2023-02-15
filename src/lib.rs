@@ -5,5 +5,6 @@ mod schema;
 
 pub use addresses::AddressGenerator;
 pub use indexer::Indexer;
+pub use indexer::Repo;
 pub use indexer::RpcClient;
 pub use mnemonic::MnemonicGenerator;

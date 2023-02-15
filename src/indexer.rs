@@ -23,22 +23,25 @@ pub struct BlockData {
     addresses: Vec<String>,
 }
 
+#[derive(TypedBuilder)]
 pub struct Indexer {
     client: RpcClient,
+    repo: Repo,
 }
 
 impl Indexer {
-    pub fn new(node_url: String) -> Self {
-        let client = RpcClient::new(node_url.to_string());
-
-        Self { client }
-    }
-
     pub fn index_block(&self, block_number: u64) -> Result<(), IndexerError> {
-        if !Repo::block_exists(block_number as i32)? {
+        if !self.repo.block_exists(block_number as i32)? {
             let block_data = self.client.get_block_data_by_block_number(block_number)?;
 
-            Repo::insert_block_data(block_data)?;
+            self.repo.insert_block_data(&block_data)?;
+
+            log::info!(
+                "Block {block_number} indexed, the number of addresses - {}",
+                block_data.addresses.len()
+            );
+        } else {
+            log::info!("Block {block_number} already indexed");
         }
 
         Ok(())

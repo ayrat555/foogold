@@ -6,9 +6,15 @@ use std::time::Duration;
 use thiserror::Error;
 use typed_builder::TypedBuilder;
 
+#[derive(TypedBuilder)]
 pub struct RpcClient {
-    pub request_agent: ureq::Agent,
-    pub url: String,
+    #[builder(default_code = "ureq::builder().timeout(Duration::from_secs(100)).build()")]
+    request_agent: ureq::Agent,
+
+    url: String,
+
+    #[builder(default)]
+    header: Option<(String, String)>,
 }
 
 const ADDRESS_KINDS: [AddressKind; 3] = [
@@ -89,12 +95,6 @@ enum AddressKind {
 }
 
 impl RpcClient {
-    pub fn new(url: String) -> Self {
-        let request_agent = ureq::builder().timeout(Duration::from_secs(100)).build();
-
-        RpcClient { url, request_agent }
-    }
-
     pub fn get_block_data_by_block_number(
         &self,
         block_number: u64,
@@ -129,8 +129,12 @@ impl RpcClient {
         let prepared_request = self
             .request_agent
             .post(&self.url)
-            .set("Content-Type", "application/json")
-            .set("apikey", "ae3b7595-8b8a-4f7d-aa8c-aa143d5eca48");
+            .set("Content-Type", "application/json");
+
+        let prepared_request = match &self.header {
+            None => prepared_request,
+            Some((key, value)) => prepared_request.set(&key, &value),
+        };
 
         let encoded_params = self.params(method, &params);
         let response = prepared_request.send_string(&encoded_params)?;

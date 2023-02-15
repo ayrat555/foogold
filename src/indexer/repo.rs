@@ -6,8 +6,8 @@ use diesel::prelude::*;
 use diesel::r2d2 as diesel_r2d2;
 use diesel::Connection;
 use once_cell::sync::OnceCell;
-use std::env;
 use thiserror::Error;
+use typed_builder::TypedBuilder;
 
 static POOL: OnceCell<diesel_r2d2::Pool<diesel_r2d2::ConnectionManager<PgConnection>>> =
     OnceCell::new();
@@ -26,11 +26,15 @@ pub enum RepoError {
     DieselError(#[from] diesel::result::Error),
 }
 
-pub struct Repo {}
+#[derive(TypedBuilder)]
+pub struct Repo {
+    database_url: String,
+    pool_size: u32,
+}
 
 impl Repo {
-    pub fn insert_block_data(block_data: BlockData) -> Result<(), RepoError> {
-        let mut connection = Self::pool().get()?;
+    pub fn insert_block_data(&self, block_data: &BlockData) -> Result<(), RepoError> {
+        let mut connection = self.pool().get()?;
 
         connection.transaction::<(), RepoError, _>(|db_connection| {
             diesel::insert_into(blocks::table)
@@ -39,6 +43,7 @@ impl Repo {
 
             let addresses: Vec<Address> = block_data
                 .addresses
+                .clone()
                 .into_iter()
                 .map(|address| Address { address })
                 .collect();
@@ -53,8 +58,8 @@ impl Repo {
         })
     }
 
-    pub fn block_exists(block_number: i32) -> Result<bool, RepoError> {
-        let mut connection = Self::pool().get()?;
+    pub fn block_exists(&self, block_number: i32) -> Result<bool, RepoError> {
+        let mut connection = self.pool().get()?;
 
         let count = blocks::table
             .filter(blocks::block_number.eq(block_number))
@@ -64,22 +69,17 @@ impl Repo {
         Ok(count > 0)
     }
 
-    fn create_connection_pool() -> r2d2::Pool<diesel_r2d2::ConnectionManager<PgConnection>> {
-        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-        let pool_size = env::var("DB_POOL_SIZE")
-            .expect("DB_POOL_SIZE must be set")
-            .parse()
-            .unwrap();
-
-        let manager = diesel_r2d2::ConnectionManager::<PgConnection>::new(database_url);
+    fn create_connection_pool(&self) -> r2d2::Pool<diesel_r2d2::ConnectionManager<PgConnection>> {
+        let manager =
+            diesel_r2d2::ConnectionManager::<PgConnection>::new(self.database_url.clone());
 
         r2d2::Pool::builder()
-            .max_size(pool_size)
+            .max_size(self.pool_size)
             .build(manager)
             .unwrap()
     }
 
-    fn pool() -> &'static r2d2::Pool<diesel_r2d2::ConnectionManager<PgConnection>> {
-        POOL.get_or_init(Repo::create_connection_pool)
+    fn pool(&self) -> &'static r2d2::Pool<diesel_r2d2::ConnectionManager<PgConnection>> {
+        POOL.get_or_init(|| self.create_connection_pool())
     }
 }
