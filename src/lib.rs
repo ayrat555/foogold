@@ -1,4 +1,4 @@
-mod checker;
+pub mod checker;
 mod indexer;
 mod schema;
 

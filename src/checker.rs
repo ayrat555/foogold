@@ -3,7 +3,9 @@ use crate::FoundAddress;
 use crate::Repo;
 use bip39::Language;
 use bip39::Mnemonic;
+use bitcoin::util::bip32::DerivationPath;
 use itertools::Itertools;
+use std::str::FromStr;
 use thiserror::Error;
 use typed_builder::TypedBuilder;
 
@@ -14,6 +16,34 @@ mod telegram_client;
 pub use addresses::AddressGenerator;
 pub use mnemonic::MnemonicGenerator;
 pub use telegram_client::TelegramClient;
+
+pub fn check() {
+    let mut paths = vec![];
+
+    for i in 0..1000 {
+        let derivation_path_str = format!("m/49'/0'/0'/0/{i}");
+        let path = DerivationPath::from_str(&derivation_path_str).unwrap();
+        paths.push(path);
+    }
+
+    let address_generator = AddressGenerator::new(paths);
+    let mnemonic = Mnemonic::parse_normalized(
+        "abandon syrup abandon syrup abandon syrup abandon syrup abandon syrup abandon syrup",
+    )
+    .unwrap();
+    let addresses = address_generator.generate(mnemonic);
+
+    let repo = Repo::builder()
+        .database_url("postgres://postgres:postgres@localhost:5432/foogold".to_string())
+        .pool_size(10)
+        .build();
+
+    for address in addresses {
+        if repo.address_exists(&address.address).unwrap() {
+            log::info!("Found address {:?}", address);
+        }
+    }
+}
 
 #[derive(TypedBuilder)]
 pub struct CombinationChecker {

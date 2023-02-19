@@ -71,6 +71,8 @@ fn main() {
 
     checker.check().unwrap()
 
+    // foogold::checker::check();
+
     // let cli = Cli::parse();
 
     // index_blocks(cli);
