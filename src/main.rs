@@ -1,8 +1,14 @@
+use bitcoin::util::bip32::DerivationPath;
 use clap::Parser;
 use dotenvy::dotenv;
+use foogold::AddressGenerator;
+use foogold::CombinationChecker;
 use foogold::Indexer;
 use foogold::Repo;
 use foogold::RpcClient;
+use foogold::TelegramClient;
+use frankenstein::Api;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[command(name = "Fool's Gold")]
@@ -36,9 +42,38 @@ fn main() {
     dotenv().ok();
     env_logger::init();
 
-    let cli = Cli::parse();
+    let api = Api::new("1276618370:AAGx5YhNQvUG4eUcQXN-OB_a09ZzYl6uh6o");
+    let client = TelegramClient::builder()
+        .chat_id(275808073)
+        .api(api)
+        .build();
+    let address_generator = AddressGenerator::new(vec![
+        DerivationPath::from_str("m/44'/0'/0'/0/0").unwrap(),
+        DerivationPath::from_str("m/44'/0'/0'/0/1").unwrap(),
+        DerivationPath::from_str("m/49'/0'/0'/0/0").unwrap(),
+        DerivationPath::from_str("m/49'/0'/0'/0/1").unwrap(),
+        DerivationPath::from_str("m/84'/0'/0'/0/0").unwrap(),
+        DerivationPath::from_str("m/84'/0'/0'/0/1").unwrap(),
+    ]);
 
-    index_blocks(cli);
+    let repo = Repo::builder()
+        .database_url("postgres://postgres:postgres@localhost:5432/foogold".to_string())
+        .pool_size(10)
+        .build();
+
+    let checker = CombinationChecker::builder()
+        .repo(repo)
+        .telegram_client(client)
+        .address_generator(address_generator)
+        .mnemonic_size(12)
+        .combination(2)
+        .build();
+
+    checker.check().unwrap()
+
+    // let cli = Cli::parse();
+
+    // index_blocks(cli);
 }
 
 fn index_blocks(cli: Cli) {

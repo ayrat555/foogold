@@ -1,6 +1,7 @@
 use super::BlockData;
 use crate::schema::addresses;
 use crate::schema::blocks;
+use crate::schema::found_addresses;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2 as diesel_r2d2;
@@ -32,6 +33,14 @@ pub struct Repo {
     pool_size: u32,
 }
 
+#[derive(Insertable, Clone, Debug, TypedBuilder)]
+#[diesel(table_name = found_addresses)]
+pub struct FoundAddress {
+    pub address: String,
+    pub derivation_path: String,
+    pub mnemonic: String,
+}
+
 impl Repo {
     pub fn insert_block_data(&self, block_data: &BlockData) -> Result<(), RepoError> {
         let mut connection = self.pool().get()?;
@@ -58,11 +67,38 @@ impl Repo {
         })
     }
 
+    pub fn insert_found_address(&self, found_address: FoundAddress) -> Result<usize, RepoError> {
+        let mut connection = self.pool().get()?;
+
+        let result = diesel::insert_into(found_addresses::table)
+            .values(found_address)
+            .on_conflict((
+                found_addresses::address,
+                found_addresses::derivation_path,
+                found_addresses::mnemonic,
+            ))
+            .do_nothing()
+            .execute(&mut connection)?;
+
+        Ok(result)
+    }
+
     pub fn block_exists(&self, block_number: i32) -> Result<bool, RepoError> {
         let mut connection = self.pool().get()?;
 
         let count = blocks::table
             .filter(blocks::block_number.eq(block_number))
+            .count()
+            .get_result::<i64>(&mut connection)?;
+
+        Ok(count > 0)
+    }
+
+    pub fn address_exists(&self, address: &str) -> Result<bool, RepoError> {
+        let mut connection = self.pool().get()?;
+
+        let count = addresses::table
+            .filter(addresses::address.eq(address))
             .count()
             .get_result::<i64>(&mut connection)?;
 

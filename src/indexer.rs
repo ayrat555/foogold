@@ -6,6 +6,7 @@ mod repo;
 
 pub use client::ClientError;
 pub use client::RpcClient;
+pub use repo::FoundAddress;
 pub use repo::Repo;
 pub use repo::RepoError;
 
