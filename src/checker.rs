@@ -6,6 +6,8 @@ use bip39::Mnemonic;
 use bitcoin::util::bip32::DerivationPath;
 use itertools::Itertools;
 use std::str::FromStr;
+use std::thread;
+use std::time;
 use thiserror::Error;
 use typed_builder::TypedBuilder;
 
@@ -50,7 +52,7 @@ pub struct CombinationChecker {
     combination: usize,
     mnemonic_size: usize,
     address_generator: AddressGenerator,
-    telegram_client: TelegramClient,
+    telegram_client: Option<TelegramClient>,
     repo: Repo,
 }
 
@@ -66,6 +68,8 @@ pub enum CheckerError {
 impl CombinationChecker {
     pub fn check(&self) -> Result<(), CheckerError> {
         for mnemonic in self.mnemonics() {
+            log::info!("Checking mnemonic #{mnemonic}");
+
             let addresses = self.address_generator.generate(mnemonic);
 
             for address in addresses {
@@ -77,8 +81,19 @@ impl CombinationChecker {
                         .build();
 
                     self.repo.insert_found_address(found_address)?;
-                    self.telegram_client
-                        .send_notification(format!("Found a new address {}", address.address))?;
+
+                    log::info!("Found address #{address:?}");
+
+                    if let Some(telegram_client) = &self.telegram_client {
+                        telegram_client.send_notification(format!(
+                            "Found a new address {}",
+                            address.address
+                        ))?;
+                    }
+
+                    let five_secs = time::Duration::from_millis(5_000);
+
+                    thread::sleep(five_secs);
                 }
             }
         }
@@ -101,7 +116,6 @@ impl CombinationChecker {
                 }
 
                 let str_mnemonic = result.join(" ");
-
                 let mnemonic = Mnemonic::parse_normalized(&str_mnemonic).unwrap();
 
                 mnemonic

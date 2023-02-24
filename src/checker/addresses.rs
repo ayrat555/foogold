@@ -24,6 +24,10 @@ pub struct Address {
 
 impl AddressGenerator {
     pub fn new(derivation_paths: Vec<DerivationPath>) -> AddressGenerator {
+        if derivation_paths.is_empty() {
+            panic!("Derivation paths vector is empty!")
+        };
+
         let secp256k1 = Secp256k1::new();
         Self {
             derivation_paths,
