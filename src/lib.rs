@@ -5,6 +5,7 @@ mod schema;
 pub use checker::AddressGenerator;
 pub use checker::CombinationChecker;
 pub use checker::MnemonicGenerator;
+pub use checker::RandomChecker;
 pub use checker::TelegramClient;
 pub use indexer::FoundAddress;
 pub use indexer::Indexer;

@@ -6,6 +6,8 @@ use dotenvy::dotenv;
 use foogold::AddressGenerator;
 use foogold::CombinationChecker;
 use foogold::Indexer;
+use foogold::MnemonicGenerator;
+use foogold::RandomChecker;
 use foogold::Repo;
 use foogold::RpcClient;
 use foogold::TelegramClient;
@@ -26,6 +28,7 @@ struct Cli {
 enum Command {
     Index(IndexerArgs),
     CombinationChecker(CombinationCheckerArgs),
+    RandomChecker(RandomCheckerArgs),
 }
 
 #[derive(Debug, Args)]
@@ -77,6 +80,21 @@ struct CombinationCheckerArgs {
 }
 
 #[derive(Debug, Args)]
+struct RandomCheckerArgs {
+    #[command(flatten)]
+    telegram_opts: TelegramOpts,
+
+    #[command(flatten)]
+    database_opts: DatabaseOpts,
+
+    #[arg(long, value_delimiter = ' ', num_args = 1.., env = "DERIVATION_PATHS")]
+    derivation_paths: Vec<String>,
+
+    #[arg(long, env = "MNEMONIC_SIZE")]
+    mnemonic_size: usize,
+}
+
+#[derive(Debug, Args)]
 struct TelegramOpts {
     #[arg(long, env = "TELEGRAM_API_TOKEN")]
     telegram_token: Option<String>,
@@ -96,6 +114,7 @@ fn main() {
         Command::CombinationChecker(combination_checker_args) => {
             check_combinations(combination_checker_args)
         }
+        Command::RandomChecker(random_checker_args) => check_random(random_checker_args),
     }
 }
 
@@ -121,30 +140,10 @@ fn index_blocks(cli: IndexerArgs) {
 }
 
 fn check_combinations(cli: CombinationCheckerArgs) {
-    let telegram_client = if cli.telegram_opts.telegram_token.is_some() {
-        let chat_id = cli
-            .telegram_opts
-            .telegram_chat_id
-            .expect("Telegram chat id must be present if telegram token is provided");
-        let api = Api::new(&cli.telegram_opts.telegram_token.unwrap());
+    check_combination_size(cli.combination_size);
 
-        let client = TelegramClient::builder().chat_id(chat_id).api(api).build();
-
-        Some(client)
-    } else {
-        None
-    };
-
-    let mut derivation_paths = vec![];
-
-    for raw_path in cli.derivation_paths {
-        let path = DerivationPath::from_str(&raw_path)
-            .expect(&format!("invalid derivation path {raw_path}"));
-
-        derivation_paths.push(path);
-    }
-
-    let address_generator = AddressGenerator::new(derivation_paths);
+    let telegram_client = new_telegram_client(cli.telegram_opts);
+    let address_generator = new_address_generator(cli.derivation_paths);
     let repo = new_repo(cli.database_opts);
 
     let checker = CombinationChecker::builder()
@@ -157,6 +156,58 @@ fn check_combinations(cli: CombinationCheckerArgs) {
 
     if let Err(error) = checker.check() {
         log::error!("Failed to check combinations - {error:?}")
+    }
+}
+
+fn check_random(cli: RandomCheckerArgs) {
+    let telegram_client = new_telegram_client(cli.telegram_opts);
+    let address_generator = new_address_generator(cli.derivation_paths);
+    let repo = new_repo(cli.database_opts);
+    let mnemonic_generator = MnemonicGenerator::new(cli.mnemonic_size);
+
+    let checker = RandomChecker::builder()
+        .repo(repo)
+        .telegram_client(telegram_client)
+        .address_generator(address_generator)
+        .mnemonic_generator(mnemonic_generator)
+        .build();
+
+    if let Err(error) = checker.check() {
+        log::error!("Failed to check combinations - {error:?}")
+    }
+}
+
+fn check_combination_size(combination_size: usize) {
+    if !(combination_size == 1 || combination_size == 2) {
+        panic!("Supported combination sizes are 1 and 2");
+    }
+}
+
+fn new_address_generator(paths: Vec<String>) -> AddressGenerator {
+    let mut derivation_paths = vec![];
+
+    for raw_path in paths {
+        let path = DerivationPath::from_str(&raw_path)
+            .expect(&format!("invalid derivation path {raw_path}"));
+
+        derivation_paths.push(path);
+    }
+
+    AddressGenerator::new(derivation_paths)
+}
+
+fn new_telegram_client(params: TelegramOpts) -> Option<TelegramClient> {
+    if params.telegram_token.is_some() {
+        let chat_id = params
+            .telegram_chat_id
+            .expect("Telegram chat id must be present if telegram token is provided");
+        let api = Api::new(&params.telegram_token.unwrap());
+
+        let client = TelegramClient::builder().chat_id(chat_id).api(api).build();
+
+        Some(client)
+    } else {
+        None
     }
 }
 
