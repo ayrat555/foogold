@@ -45,7 +45,7 @@ impl AddressGenerator {
             let child = master_key.derive_priv(&self.secp256k1, path).unwrap();
             let public_key = ExtendedPubKey::from_priv(&self.secp256k1, &child).public_key;
 
-            let addr = match path.into_iter().nth(0) {
+            let addr = match path.into_iter().next() {
                 Some(ChildNumber::Hardened { index: 84 }) => {
                     BitcoinAddress::p2wpkh(&PublicKey::new(public_key), Network::Bitcoin).unwrap()
                 }

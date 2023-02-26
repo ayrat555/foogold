@@ -107,7 +107,7 @@ impl RpcClient {
     }
 
     fn get_block_hash(&self, block_number: u64) -> Result<String, ClientError> {
-        let block_hash = self.request("getblockhash", &[block_number])?;
+        let block_hash = self.request("getblockhash", [block_number])?;
 
         Ok(block_hash)
     }
@@ -133,7 +133,7 @@ impl RpcClient {
 
         let prepared_request = match &self.header {
             None => prepared_request,
-            Some((key, value)) => prepared_request.set(&key, &value),
+            Some((key, value)) => prepared_request.set(key, value),
         };
 
         let encoded_params = self.params(method, &params);

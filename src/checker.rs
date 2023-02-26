@@ -8,6 +8,7 @@ use thiserror::Error;
 mod addresses;
 mod combination_checker;
 mod mnemonic;
+mod mnemonic_checker;
 mod random_checker;
 mod telegram_client;
 
@@ -15,6 +16,7 @@ pub use addresses::Address;
 pub use addresses::AddressGenerator;
 pub use combination_checker::CombinationChecker;
 pub use mnemonic::MnemonicGenerator;
+pub use mnemonic_checker::MnemonicChecker;
 pub use random_checker::RandomChecker;
 pub use telegram_client::TelegramClient;
 
@@ -41,7 +43,7 @@ pub fn check_address(
 
         repo.insert_found_address(found_address)?;
 
-        log::info!("Found address #{address:?}");
+        log::info!("Found address {address:?}");
 
         if let Some(telegram_client) = telegram_client {
             telegram_client

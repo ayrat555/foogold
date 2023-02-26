@@ -20,7 +20,7 @@ pub struct CombinationChecker {
 impl CombinationChecker {
     pub fn check(&self) -> Result<(), CheckerError> {
         for mnemonic in self.mnemonics() {
-            log::info!("Checking mnemonic #{mnemonic}");
+            log::info!("Checking mnemonic {mnemonic}");
 
             let addresses = self.address_generator.generate(mnemonic);
 
@@ -47,9 +47,7 @@ impl CombinationChecker {
                 }
 
                 let str_mnemonic = result.join(" ");
-                let mnemonic = Mnemonic::parse_normalized(&str_mnemonic).unwrap();
-
-                mnemonic
+                Mnemonic::parse_normalized(&str_mnemonic).unwrap()
             })
             .collect::<Vec<Mnemonic>>()
     }

@@ -19,7 +19,7 @@ impl RandomChecker {
         loop {
             let mnemonic = self.mnemonic_generator.generate();
 
-            log::info!("Checking mnemonic #{mnemonic}");
+            log::info!("Checking mnemonic {mnemonic}");
 
             let addresses = self.address_generator.generate(mnemonic);
 

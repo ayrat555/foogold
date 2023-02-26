@@ -1,3 +1,4 @@
+use bip39::Mnemonic;
 use bitcoin::util::bip32::DerivationPath;
 use clap::Args;
 use clap::Parser;
@@ -6,6 +7,7 @@ use dotenvy::dotenv;
 use foogold::AddressGenerator;
 use foogold::CombinationChecker;
 use foogold::Indexer;
+use foogold::MnemonicChecker;
 use foogold::MnemonicGenerator;
 use foogold::RandomChecker;
 use foogold::Repo;
@@ -29,6 +31,7 @@ enum Command {
     Index(IndexerArgs),
     CombinationChecker(CombinationCheckerArgs),
     RandomChecker(RandomCheckerArgs),
+    MnemonicChecker(MnemonicCheckerArgs),
 }
 
 #[derive(Debug, Args)]
@@ -95,6 +98,21 @@ struct RandomCheckerArgs {
 }
 
 #[derive(Debug, Args)]
+struct MnemonicCheckerArgs {
+    #[command(flatten)]
+    telegram_opts: TelegramOpts,
+
+    #[command(flatten)]
+    database_opts: DatabaseOpts,
+
+    #[arg(long, value_delimiter = ' ', num_args = 1.., env = "DERIVATION_PATHS")]
+    derivation_paths: Vec<String>,
+
+    #[arg(long, env = "MNEMONIC")]
+    mnemonic: String,
+}
+
+#[derive(Debug, Args)]
 struct TelegramOpts {
     #[arg(long, env = "TELEGRAM_API_TOKEN")]
     telegram_token: Option<String>,
@@ -115,6 +133,7 @@ fn main() {
             check_combinations(combination_checker_args)
         }
         Command::RandomChecker(random_checker_args) => check_random(random_checker_args),
+        Command::MnemonicChecker(mnemonic_checker_args) => check_mnemonic(mnemonic_checker_args),
     }
 }
 
@@ -173,7 +192,25 @@ fn check_random(cli: RandomCheckerArgs) {
         .build();
 
     if let Err(error) = checker.check() {
-        log::error!("Failed to check combinations - {error:?}")
+        log::error!("Failed to check random mnemonics - {error:?}")
+    }
+}
+
+fn check_mnemonic(cli: MnemonicCheckerArgs) {
+    let telegram_client = new_telegram_client(cli.telegram_opts);
+    let address_generator = new_address_generator(cli.derivation_paths);
+    let repo = new_repo(cli.database_opts);
+    let mnemonic = Mnemonic::parse_normalized(&cli.mnemonic).unwrap();
+
+    let checker = MnemonicChecker::builder()
+        .repo(repo)
+        .telegram_client(telegram_client)
+        .address_generator(address_generator)
+        .mnemonic(mnemonic)
+        .build();
+
+    if let Err(error) = checker.check() {
+        log::error!("Failed to check random mnemonics - {error:?}")
     }
 }
 
@@ -188,7 +225,7 @@ fn new_address_generator(paths: Vec<String>) -> AddressGenerator {
 
     for raw_path in paths {
         let path = DerivationPath::from_str(&raw_path)
-            .expect(&format!("invalid derivation path {raw_path}"));
+            .unwrap_or_else(|_| panic!("invalid derivation path {raw_path}"));
 
         derivation_paths.push(path);
     }
@@ -217,52 +254,3 @@ fn new_repo(params: DatabaseOpts) -> Repo {
         .pool_size(params.database_pool_size)
         .build()
 }
-
-// examples
-
-// fn generate_10_mnemonics() -> Vec<String> {
-//     let mnemonic_generator = MnemonicGenerator::new(12);
-//     let mut vec = vec![];
-
-//     for _ in 1..10 {
-//         let mnemonic = mnemonic_generator.generate();
-
-//         vec.push(mnemonic.to_string());
-//     }
-
-//     vec
-// }
-
-// fn fetch_block_data() {
-//     let client = RpcClient::new(
-//         "https://spinode-kong-proxy.payments-dev.testenv.io/d12f525b-880b-4d6e-ae52-003668c92f08"
-//             .to_string(),
-//     );
-
-//     eprintln!("{:?}", client.get_block_data_by_block_number(100000));
-// }
-
-// fn generate_addresses() {
-//     let mnemonic_generator = MnemonicGenerator::new(12);
-//     let address_generator = AddressGenerator::new(vec![
-//         DerivationPath::from_str("m/44'/0'/0'/0/0").unwrap(),
-//         DerivationPath::from_str("m/44'/0'/0'/0/1").unwrap(),
-//         DerivationPath::from_str("m/49'/0'/0'/0/0").unwrap(),
-//         DerivationPath::from_str("m/49'/0'/0'/0/1").unwrap(),
-//         DerivationPath::from_str("m/84'/0'/0'/0/0").unwrap(),
-//         DerivationPath::from_str("m/84'/0'/0'/0/1").unwrap(),
-//     ]);
-
-//     let mnemonic = mnemonic_generator.generate();
-
-//     eprintln!("mnemonic {}", mnemonic);
-
-//     for address in address_generator.generate(mnemonic) {
-//         eprintln!("{} {}", address.address, address.derivation_path);
-//     }
-
-//     eprintln!(
-//         "{:?}",
-//         address_generator.generate(mnemonic_generator.generate())
-//     );
-// }
