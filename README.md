@@ -19,6 +19,12 @@ It has the following features:
 
 ### Indexing the chain
 
+Setup database by running:
+
+```
+diesel database setup
+```
+
 For this step, you'll need access to a bitcoin node.
 
 ```rust
