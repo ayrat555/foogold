@@ -33,7 +33,7 @@ cargo run --release -- index --node-url "https://mynode.com" --sync-start-block 
 
 The number of addresses is more than 1 billion and it may take from a couple of days to a couple of weeks for the whole chain to sync. Ideally, several instances of this command should be run indexing different block ranges
 
-![index](demo/demo2.gif)
+![index](demo/demo1.gif)
 
 ##### Docs
 
@@ -65,7 +65,7 @@ Options:
 cargo run --release -- mnemonic-checker --derivation-paths "m/44'/0'/0'/0/0" "m/44'/0'/0'/0/1" "m/49'/0'/0'/0/0" "m/49'/0'/0'/0/1" "m/84'/0'/0'/0/0" "m/84'/0'/0'/0/1" --mnemonic "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon"
 ```
 
-![single](demo/demo1.gif)
+![single](demo/demo2.gif)
 
 ##### Docs
 
